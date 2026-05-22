@@ -1,6 +1,7 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pymongo import MongoClient, DESCENDING, ASCENDING
+from fastapi.responses import JSONResponse
+from pymongo import MongoClient, DESCENDING
 from pydantic import BaseModel
 from bson import ObjectId
 from datetime import datetime
@@ -13,8 +14,19 @@ app.add_middleware(
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
 )
+
+@app.options("/{rest_of_path:path}")
+async def preflight_handler(rest_of_path: str, request: Request):
+    return JSONResponse(
+        content={},
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        }
+    )
 
 MONGO_URI = os.environ.get("MONGO_URI", "mongodb://ISIS2304A20202610:Fp6BX3fzAN7X@157.253.236.88:8087")
 MONGO_DB  = os.environ.get("MONGO_DB",  "ISIS2304A20202610")
@@ -31,7 +43,6 @@ def serial(doc):
     doc["_id"] = str(doc["_id"])
     return doc
 
-# Modelos Pydantic para evitar problemas CORS con dict
 class VotoData(BaseModel):
     id_usuario: int
 
@@ -92,7 +103,7 @@ def post_evento(bar_id: int, evento: dict):
 @app.post("/hoteles/{hotel_id}/resenas")
 def crear_resena(hotel_id: int, datos: ResenaData):
     if resenas.find_one({"id_reserva": datos.id_reserva}):
-        raise HTTPException(status_code=400, detail="Ya existe una reseña para esta reserva.")
+        raise HTTPException(status_code=400, detail="Ya existe una resena para esta reserva.")
     if not (1 <= datos.calificacion <= 5):
         raise HTTPException(status_code=400, detail="La calificacion debe estar entre 1 y 5.")
     if len(datos.texto.strip()) < 10:
