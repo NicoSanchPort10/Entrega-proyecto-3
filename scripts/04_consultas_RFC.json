@@ -1,0 +1,230 @@
+// ============================================================
+// DANN-ALPES – Módulo de Reseñas
+// Script 04: Consultas de Agregación (RFC1, RFC2, RFC3)
+// ============================================================
+
+use("dann_alpes_resenas");
+
+// ─────────────────────────────────────────────
+// RFC1 – Top 10 hoteles por calificación promedio
+//        en un período definido
+//
+// Documentos usados: resenas
+// Atributos: id_hotel, calificacion, estado, fecha_creacion
+//
+// Pipeline:
+//   1. $match  → solo reseñas publicadas en el rango de fechas
+//   2. $group  → agrupa por hotel, calcula promedio, conteo
+//   3. $sort   → ordena descendente por calificación promedio
+//   4. $limit  → primeros 10
+// ─────────────────────────────────────────────
+
+print("\n=== RFC1: Top 10 hoteles por calificación promedio ===\n");
+
+const RFC1 = db.resenas.aggregate([
+  {
+    $match: {
+      estado: "publicada",
+      fecha_creacion: {
+        $gte: new Date("2024-01-01"),
+        $lte: new Date("2024-12-31")
+      }
+    }
+  },
+  {
+    $group: {
+      _id: "$id_hotel",
+      calificacion_promedio: { $avg: "$calificacion" },
+      total_resenas: { $sum: 1 },
+      total_votos_utilidad: { $sum: "$votos_utilidad" }
+    }
+  },
+  {
+    $sort: { calificacion_promedio: -1, total_resenas: -1 }
+  },
+  {
+    $limit: 10
+  },
+  {
+    $project: {
+      _id: 0,
+      id_hotel: "$_id",
+      calificacion_promedio: { $round: ["$calificacion_promedio", 2] },
+      total_resenas: 1,
+      total_votos_utilidad: 1
+    }
+  }
+]);
+
+RFC1.forEach(doc => printjson(doc));
+
+
+// ─────────────────────────────────────────────
+// RFC2 – Evolución de la reputación de un hotel mes a mes
+//        durante un año determinado
+//
+// Documentos usados: resenas
+// Atributos: id_hotel, calificacion, estado, fecha_creacion
+//
+// Pipeline:
+//   1. $match  → reseñas publicadas del hotel elegido en el año
+//   2. $group  → agrupa por mes ($month), calcula promedio y conteo
+//   3. $sort   → ordena por mes ascendente
+//   4. $project → formatea la salida
+// ─────────────────────────────────────────────
+
+print("\n=== RFC2: Evolución reputación Hotel 1 en 2024 ===\n");
+
+const ID_HOTEL_CONSULTA = 1;  // ← Cambiar para consultar otro hotel
+const AÑO_CONSULTA = 2024;
+
+const RFC2 = db.resenas.aggregate([
+  {
+    $match: {
+      estado: "publicada",
+      id_hotel: ID_HOTEL_CONSULTA,
+      fecha_creacion: {
+        $gte: new Date(`${AÑO_CONSULTA}-01-01`),
+        $lte: new Date(`${AÑO_CONSULTA}-12-31`)
+      }
+    }
+  },
+  {
+    $group: {
+      _id: { mes: { $month: "$fecha_creacion" } },
+      calificacion_promedio: { $avg: "$calificacion" },
+      total_resenas: { $sum: 1 }
+    }
+  },
+  {
+    $sort: { "_id.mes": 1 }
+  },
+  {
+    $project: {
+      _id: 0,
+      mes: "$_id.mes",
+      calificacion_promedio: { $round: ["$calificacion_promedio", 2] },
+      total_resenas: 1
+    }
+  }
+]);
+
+RFC2.forEach(doc => printjson(doc));
+
+
+// ─────────────────────────────────────────────
+// RFC3 – Perfil comparativo de hoteles por ciudad
+//        Calificación promedio, total reseñas,
+//        % con respuesta, % destacadas
+//        + flag si está por debajo del promedio de la ciudad
+//
+// Documentos usados: resenas
+// Atributos: id_hotel, id_ciudad (debe agregarse al documento),
+//            calificacion, estado, respuesta_hotel, destacada
+//
+// NOTA: Como id_ciudad no está en MongoDB (vive en Oracle),
+//       se usa una colección auxiliar o se filtra por lista de hoteles.
+//       Aquí filtramos por lista de hoteles de Bogotá (IDs 1 y 2)
+//       como lo haría la integración APEX→MongoDB.
+//
+// Pipeline:
+//   1. $match  → solo publicadas, solo hoteles de la ciudad
+//   2. $group  → métricas por hotel
+//   3. $addFields → calcula booleanos de respuesta y destacada
+//   4. $group  → segunda agrupación para promedio de ciudad
+//   5. $lookup → self-join simulado con $facet
+//   Se usa $facet para calcular promedio ciudad y métricas hotel en un solo pass
+// ─────────────────────────────────────────────
+
+print("\n=== RFC3: Perfil comparativo de hoteles en Bogotá ===\n");
+
+const HOTELES_BOGOTA = [1, 2];  // ← IDs vendrían de Oracle vía APEX
+
+const RFC3 = db.resenas.aggregate([
+  {
+    $match: {
+      estado: "publicada",
+      id_hotel: { $in: HOTELES_BOGOTA }
+    }
+  },
+  {
+    $facet: {
+      // Rama A: métricas por hotel
+      por_hotel: [
+        {
+          $group: {
+            _id: "$id_hotel",
+            calificacion_promedio: { $avg: "$calificacion" },
+            total_resenas: { $sum: 1 },
+            resenas_con_respuesta: {
+              $sum: {
+                $cond: [{ $ifNull: ["$respuesta_hotel", false] }, 1, 0]
+              }
+            },
+            resenas_destacadas: {
+              $sum: {
+                $cond: [{ $eq: ["$destacada", true] }, 1, 0]
+              }
+            }
+          }
+        },
+        {
+          $project: {
+            _id: 0,
+            id_hotel: "$_id",
+            calificacion_promedio: { $round: ["$calificacion_promedio", 2] },
+            total_resenas: 1,
+            pct_con_respuesta: {
+              $round: [
+                { $multiply: [{ $divide: ["$resenas_con_respuesta", "$total_resenas"] }, 100] },
+                1
+              ]
+            },
+            pct_destacadas: {
+              $round: [
+                { $multiply: [{ $divide: ["$resenas_destacadas", "$total_resenas"] }, 100] },
+                1
+              ]
+            }
+          }
+        }
+      ],
+      // Rama B: promedio global de la ciudad
+      promedio_ciudad: [
+        {
+          $group: {
+            _id: null,
+            promedio_ciudad: { $avg: "$calificacion" }
+          }
+        }
+      ]
+    }
+  },
+  {
+    $project: {
+      hoteles: "$por_hotel",
+      promedio_ciudad: { $arrayElemAt: ["$promedio_ciudad.promedio_ciudad", 0] }
+    }
+  },
+  {
+    $unwind: "$hoteles"
+  },
+  {
+    $addFields: {
+      "hoteles.promedio_ciudad": { $round: ["$promedio_ciudad", 2] },
+      "hoteles.bajo_promedio": {
+        $lt: ["$hoteles.calificacion_promedio", "$promedio_ciudad"]
+      }
+    }
+  },
+  {
+    $replaceRoot: { newRoot: "$hoteles" }
+  },
+  {
+    $sort: { calificacion_promedio: -1 }
+  }
+]);
+
+RFC3.forEach(doc => printjson(doc));
+
+print("\n=== Script 04 completado ===");

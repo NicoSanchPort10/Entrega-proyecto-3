@@ -1,0 +1,236 @@
+// ============================================================
+// DANN-ALPES – Módulo de Reseñas
+// Script 03: Población de datos de prueba
+// Suficientes datos para probar RFC1, RFC2, RFC3
+// ============================================================
+
+use("dann_alpes_resenas");
+
+// Limpiar colecciones antes de poblar (para re-ejecución)
+db.resenas.deleteMany({});
+db.votos_utilidad.deleteMany({});
+print("✓ Colecciones limpiadas");
+
+// ─────────────────────────────────────────────
+// DATOS DE REFERENCIA (IDs de Oracle)
+// Asume hoteles con ID_HOTEL 1-6 en ciudades:
+//   Bogotá  → hoteles 1, 2
+//   Medellín → hoteles 3, 4
+//   Cartagena → hoteles 5, 6
+// Clientes con ID_CLIENTE 1-10
+// Reservas completadas con ID_RESERVA 1-30
+// ─────────────────────────────────────────────
+
+const ahora = new Date();
+const fecha = (dias) => new Date(ahora.getTime() - dias * 86400000);
+
+// Helper para crear fecha de un mes específico de 2024
+const fechaMes = (mes, dia) => new Date(2024, mes - 1, dia);
+
+// ─────────────────────────────────────────────
+// INSERTAR RESEÑAS
+// ─────────────────────────────────────────────
+const resenas = [
+
+  // ── HOTEL 1 (Bogotá) – 6 reseñas, calificaciones altas ──
+  {
+    id_hotel: 1, id_cliente: 1, id_reserva: 1,
+    calificacion: 5, texto: "Excelente servicio, habitaciones muy limpias y cómodas. El personal muy atento.",
+    estado: "publicada", fecha_creacion: fechaMes(1, 10), votos_utilidad: 12, destacada: true,
+    respuesta_hotel: { texto: "¡Gracias por su visita! Lo esperamos pronto.", fecha: fechaMes(1, 12), id_admin: "admin_hotel1" }
+  },
+  {
+    id_hotel: 1, id_cliente: 2, id_reserva: 2,
+    calificacion: 5, texto: "Ubicación perfecta, desayuno delicioso y las vistas son increíbles.",
+    estado: "publicada", fecha_creacion: fechaMes(2, 5), votos_utilidad: 8,
+    respuesta_hotel: { texto: "Nos alegra que haya disfrutado su estadía.", fecha: fechaMes(2, 7), id_admin: "admin_hotel1" }
+  },
+  {
+    id_hotel: 1, id_cliente: 3, id_reserva: 3,
+    calificacion: 4, texto: "Muy buen hotel en general, solo el ruido del exterior molestó un poco.",
+    estado: "publicada", fecha_creacion: fechaMes(3, 20), votos_utilidad: 5
+  },
+  {
+    id_hotel: 1, id_cliente: 4, id_reserva: 4,
+    calificacion: 5, texto: "Una experiencia magnífica de principio a fin. El spa es de primera.",
+    estado: "publicada", fecha_creacion: fechaMes(5, 8), votos_utilidad: 15,
+    respuesta_hotel: { texto: "Gracias por elegirnos para su descanso.", fecha: fechaMes(5, 10), id_admin: "admin_hotel1" }
+  },
+  {
+    id_hotel: 1, id_cliente: 5, id_reserva: 5,
+    calificacion: 4, texto: "Muy buena relación calidad-precio. Recomiendo las suites superiores.",
+    estado: "publicada", fecha_creacion: fechaMes(7, 14), votos_utilidad: 6
+  },
+  {
+    id_hotel: 1, id_cliente: 6, id_reserva: 6,
+    calificacion: 5, texto: "Hotel de lujo con atención personalizada. Volvería sin dudarlo.",
+    estado: "publicada", fecha_creacion: fechaMes(9, 3), votos_utilidad: 10,
+    respuesta_hotel: { texto: "Un placer recibirlo, lo esperamos de vuelta.", fecha: fechaMes(9, 5), id_admin: "admin_hotel1" }
+  },
+
+  // ── HOTEL 2 (Bogotá) – 4 reseñas, calificaciones medias ──
+  {
+    id_hotel: 2, id_cliente: 7, id_reserva: 7,
+    calificacion: 3, texto: "Hotel aceptable pero el aire acondicionado de la habitación no funcionaba bien.",
+    estado: "publicada", fecha_creacion: fechaMes(1, 22), votos_utilidad: 7,
+    respuesta_hotel: { texto: "Lamentamos el inconveniente, ya fue corregido.", fecha: fechaMes(1, 24), id_admin: "admin_hotel2" }
+  },
+  {
+    id_hotel: 2, id_cliente: 8, id_reserva: 8,
+    calificacion: 4, texto: "Buena ubicación y precio razonable. El check-in fue rápido.",
+    estado: "publicada", fecha_creacion: fechaMes(3, 11), votos_utilidad: 3
+  },
+  {
+    id_hotel: 2, id_cliente: 9, id_reserva: 9,
+    calificacion: 2, texto: "Decepcionante, la habitación no corresponde a las fotos del sitio web.",
+    estado: "publicada", fecha_creacion: fechaMes(6, 18), votos_utilidad: 20
+  },
+  {
+    id_hotel: 2, id_cliente: 10, id_reserva: 10,
+    calificacion: 4, texto: "Servicio de restaurante excelente, habitaciones bien mantenidas.",
+    estado: "publicada", fecha_creacion: fechaMes(10, 5), votos_utilidad: 4,
+    respuesta_hotel: { texto: "Gracias por sus comentarios positivos.", fecha: fechaMes(10, 7), id_admin: "admin_hotel2" }
+  },
+
+  // ── HOTEL 3 (Medellín) – 5 reseñas, calificaciones muy altas ──
+  {
+    id_hotel: 3, id_cliente: 1, id_reserva: 11,
+    calificacion: 5, texto: "El mejor hotel que he visitado en Medellín. Vista panorámica espectacular.",
+    estado: "publicada", fecha_creacion: fechaMes(2, 14), votos_utilidad: 18, destacada: true,
+    respuesta_hotel: { texto: "¡Gracias! Medellín siempre tendrá su habitación lista.", fecha: fechaMes(2, 16), id_admin: "admin_hotel3" }
+  },
+  {
+    id_hotel: 3, id_cliente: 2, id_reserva: 12,
+    calificacion: 5, texto: "Piscina impresionante, gimnasio completo y restaurante gourmet.",
+    estado: "publicada", fecha_creacion: fechaMes(4, 9), votos_utilidad: 11
+  },
+  {
+    id_hotel: 3, id_cliente: 3, id_reserva: 13,
+    calificacion: 4, texto: "Excelente relación calidad precio. Staff muy profesional.",
+    estado: "publicada", fecha_creacion: fechaMes(6, 25), votos_utilidad: 8,
+    respuesta_hotel: { texto: "Su opinión nos ayuda a mejorar cada día.", fecha: fechaMes(6, 27), id_admin: "admin_hotel3" }
+  },
+  {
+    id_hotel: 3, id_cliente: 4, id_reserva: 14,
+    calificacion: 5, texto: "Habitaciones amplias y muy bien decoradas. Desayuno completo.",
+    estado: "publicada", fecha_creacion: fechaMes(8, 19), votos_utilidad: 14
+  },
+  {
+    id_hotel: 3, id_cliente: 5, id_reserva: 15,
+    calificacion: 5, texto: "Sin duda el mejor hotel de la cadena. Superó todas las expectativas.",
+    estado: "publicada", fecha_creacion: fechaMes(11, 3), votos_utilidad: 22,
+    respuesta_hotel: { texto: "Nos llena de orgullo su calificación.", fecha: fechaMes(11, 5), id_admin: "admin_hotel3" }
+  },
+
+  // ── HOTEL 4 (Medellín) – 4 reseñas ──
+  {
+    id_hotel: 4, id_cliente: 6, id_reserva: 16,
+    calificacion: 3, texto: "Hotel funcional pero le falta modernización en las habitaciones.",
+    estado: "publicada", fecha_creacion: fechaMes(1, 30), votos_utilidad: 5
+  },
+  {
+    id_hotel: 4, id_cliente: 7, id_reserva: 17,
+    calificacion: 4, texto: "Buen hotel para viajes de negocios, conexión a internet excelente.",
+    estado: "publicada", fecha_creacion: fechaMes(4, 22), votos_utilidad: 9,
+    respuesta_hotel: { texto: "Gracias, mejoraremos los puntos mencionados.", fecha: fechaMes(4, 24), id_admin: "admin_hotel4" }
+  },
+  {
+    id_hotel: 4, id_cliente: 8, id_reserva: 18,
+    calificacion: 3, texto: "Regular. Esperaba más dado el precio. El parqueadero es pequeño.",
+    estado: "publicada", fecha_creacion: fechaMes(7, 7), votos_utilidad: 6
+  },
+  {
+    id_hotel: 4, id_cliente: 9, id_reserva: 19,
+    calificacion: 4, texto: "Buen servicio de cuarto, atención rápida y amable.",
+    estado: "publicada", fecha_creacion: fechaMes(10, 15), votos_utilidad: 3
+  },
+
+  // ── HOTEL 5 (Cartagena) – 5 reseñas, calificaciones altas ──
+  {
+    id_hotel: 5, id_cliente: 10, id_reserva: 20,
+    calificacion: 5, texto: "Paraíso en el Caribe. Playa privada, atardeceres únicos.",
+    estado: "publicada", fecha_creacion: fechaMes(1, 15), votos_utilidad: 25, destacada: true,
+    respuesta_hotel: { texto: "Cartagena siempre lo espera con los brazos abiertos.", fecha: fechaMes(1, 17), id_admin: "admin_hotel5" }
+  },
+  {
+    id_hotel: 5, id_cliente: 1, id_reserva: 21,
+    calificacion: 5, texto: "Hotel boutique con encanto colonial y lujo moderno. Perfecto.",
+    estado: "publicada", fecha_creacion: fechaMes(3, 8), votos_utilidad: 19
+  },
+  {
+    id_hotel: 5, id_cliente: 2, id_reserva: 22,
+    calificacion: 4, texto: "El calor es intenso pero las instalaciones ayudan mucho.",
+    estado: "publicada", fecha_creacion: fechaMes(5, 20), votos_utilidad: 7,
+    respuesta_hotel: { texto: "Contamos con climatización en todas las áreas.", fecha: fechaMes(5, 22), id_admin: "admin_hotel5" }
+  },
+  {
+    id_hotel: 5, id_cliente: 3, id_reserva: 23,
+    calificacion: 5, texto: "La atención personalizada es incomparable. Todos conocen tu nombre.",
+    estado: "publicada", fecha_creacion: fechaMes(8, 12), votos_utilidad: 16
+  },
+  {
+    id_hotel: 5, id_cliente: 4, id_reserva: 24,
+    calificacion: 4, texto: "Excelente para luna de miel. Detalles románticos incluidos.",
+    estado: "publicada", fecha_creacion: fechaMes(11, 28), votos_utilidad: 13,
+    respuesta_hotel: { texto: "¡Felicidades y gracias por celebrar con nosotros!", fecha: fechaMes(11, 30), id_admin: "admin_hotel5" }
+  },
+
+  // ── HOTEL 6 (Cartagena) – 3 reseñas ──
+  {
+    id_hotel: 6, id_cliente: 5, id_reserva: 25,
+    calificacion: 4, texto: "Hotel bien ubicado en el centro histórico. Fácil acceso a todo.",
+    estado: "publicada", fecha_creacion: fechaMes(2, 22), votos_utilidad: 8
+  },
+  {
+    id_hotel: 6, id_cliente: 6, id_reserva: 26,
+    calificacion: 3, texto: "El ruido de la calle es inevitable dado el centro histórico.",
+    estado: "publicada", fecha_creacion: fechaMes(5, 14), votos_utilidad: 4,
+    respuesta_hotel: { texto: "Ofrecemos tapones y cortinas blackout en recepción.", fecha: fechaMes(5, 16), id_admin: "admin_hotel6" }
+  },
+  {
+    id_hotel: 6, id_cliente: 7, id_reserva: 27,
+    calificacion: 4, texto: "Muy buen hotel para conocer Cartagena. Tours incluidos excelentes.",
+    estado: "publicada", fecha_creacion: fechaMes(9, 19), votos_utilidad: 10
+  },
+
+  // ── Reseña eliminada (para probar RF3 y RF6) ──
+  {
+    id_hotel: 1, id_cliente: 8, id_reserva: 28,
+    calificacion: 1, texto: "Reseña de prueba que fue eliminada por el cliente.",
+    estado: "eliminada", fecha_creacion: fechaMes(4, 1), fecha_eliminacion: fechaMes(4, 5),
+    eliminado_por: "cliente", votos_utilidad: 0
+  },
+  {
+    id_hotel: 2, id_cliente: 9, id_reserva: 29,
+    calificacion: 1, texto: "Contenido eliminado por violación de políticas de convivencia digital.",
+    estado: "eliminada", fecha_creacion: fechaMes(7, 3), fecha_eliminacion: fechaMes(7, 10),
+    eliminado_por: "administrador", votos_utilidad: 0
+  }
+];
+
+const resultado = db.resenas.insertMany(resenas);
+print(`✓ ${Object.keys(resultado.insertedIds).length} reseñas insertadas`);
+
+// ─────────────────────────────────────────────
+// INSERTAR VOTOS DE UTILIDAD
+// ─────────────────────────────────────────────
+const ids = db.resenas.find({ estado: "publicada" }, { _id: 1 }).toArray();
+
+const votos = [
+  { id_resena: ids[0]._id, id_usuario: 2, fecha_voto: fechaMes(1, 11) },
+  { id_resena: ids[0]._id, id_usuario: 3, fecha_voto: fechaMes(1, 12) },
+  { id_resena: ids[1]._id, id_usuario: 1, fecha_voto: fechaMes(2, 6) },
+  { id_resena: ids[2]._id, id_usuario: 4, fecha_voto: fechaMes(3, 21) },
+  { id_resena: ids[3]._id, id_usuario: 5, fecha_voto: fechaMes(5, 9) },
+  { id_resena: ids[4]._id, id_usuario: 6, fecha_voto: fechaMes(7, 15) },
+  { id_resena: ids[5]._id, id_usuario: 7, fecha_voto: fechaMes(9, 4) },
+  { id_resena: ids[6]._id, id_usuario: 8, fecha_voto: fechaMes(1, 23) },
+  { id_resena: ids[7]._id, id_usuario: 9, fecha_voto: fechaMes(3, 12) },
+  { id_resena: ids[8]._id, id_usuario: 10, fecha_voto: fechaMes(6, 19) }
+];
+
+db.votos_utilidad.insertMany(votos);
+print(`✓ ${votos.length} votos de utilidad insertados`);
+print("=== Script 03 completado ===");
+print(`Total reseñas: ${db.resenas.countDocuments()}`);
+print(`Total votos:   ${db.votos_utilidad.countDocuments()}`);

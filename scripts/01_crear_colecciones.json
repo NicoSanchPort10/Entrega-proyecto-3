@@ -1,0 +1,55 @@
+// ============================================================
+// DANN-ALPES – Módulo de Reseñas
+// Script 01: Creación de colecciones en MongoDB
+// Base de datos: dann_alpes_resenas
+// ============================================================
+
+use("dann_alpes_resenas");
+
+// ─────────────────────────────────────────────
+// 1. COLECCIÓN: resenas
+//    Documento principal del módulo.
+//    Referencia IDs de Oracle: ID_HOTEL, ID_CLIENTE, ID_RESERVA
+// ─────────────────────────────────────────────
+db.createCollection("resenas");
+print("✓ Colección 'resenas' creada");
+
+// ─────────────────────────────────────────────
+// 2. COLECCIÓN: votos_utilidad
+//    Registra qué usuario autenticado votó qué reseña.
+//    Separada para evitar crecimiento ilimitado del doc de reseña.
+// ─────────────────────────────────────────────
+db.createCollection("votos_utilidad");
+print("✓ Colección 'votos_utilidad' creada");
+
+// ─────────────────────────────────────────────
+// Índices de resenas
+// ─────────────────────────────────────────────
+
+// Consultas por hotel (RF4, RFC1, RFC2, RFC3)
+db.resenas.createIndex({ id_hotel: 1, fecha_creacion: -1 });
+
+// Historial del cliente (RF6)
+db.resenas.createIndex({ id_cliente: 1, fecha_creacion: -1 });
+
+// Unicidad: un cliente solo puede reseñar una reserva una vez (RF1)
+db.resenas.createIndex(
+  { id_reserva: 1 },
+  { unique: true, sparse: true }
+);
+
+// Reseña destacada por hotel (RF9)
+db.resenas.createIndex(
+  { id_hotel: 1, destacada: 1 },
+  { sparse: true }
+);
+
+// Índices de votos_utilidad
+// Un usuario solo puede votar una reseña una vez (RF5)
+db.votos_utilidad.createIndex(
+  { id_resena: 1, id_usuario: 1 },
+  { unique: true }
+);
+
+print("✓ Índices creados");
+print("=== Script 01 completado ===");

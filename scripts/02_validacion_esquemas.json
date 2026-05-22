@@ -1,0 +1,167 @@
+// ============================================================
+// DANN-ALPES – Módulo de Reseñas
+// Script 02: Esquemas de validación (JSON Schema)
+// ============================================================
+
+use("dann_alpes_resenas");
+
+// ─────────────────────────────────────────────
+// VALIDACIÓN: resenas
+// ─────────────────────────────────────────────
+db.runCommand({
+  collMod: "resenas",
+  validator: {
+    $jsonSchema: {
+      bsonType: "object",
+      title: "Esquema de validación – Colección resenas",
+      required: [
+        "id_hotel",
+        "id_cliente",
+        "id_reserva",
+        "calificacion",
+        "texto",
+        "estado",
+        "fecha_creacion"
+      ],
+      properties: {
+
+        id_hotel: {
+          bsonType: "int",
+          description: "ID del hotel en Oracle (HOTEL.ID_HOTEL). Requerido.",
+          minimum: 1
+        },
+
+        id_cliente: {
+          bsonType: "int",
+          description: "ID del cliente en Oracle (CLIENTE.ID_CLIENTE). Requerido.",
+          minimum: 1
+        },
+
+        id_reserva: {
+          bsonType: "int",
+          description: "ID de la reserva en Oracle (RESERVA.ID_RESERVA). Requerido y único.",
+          minimum: 1
+        },
+
+        calificacion: {
+          bsonType: "int",
+          description: "Calificación general del 1 al 5. Requerido.",
+          minimum: 1,
+          maximum: 5
+        },
+
+        texto: {
+          bsonType: "string",
+          description: "Comentario del huésped. Requerido. Mínimo 10 caracteres.",
+          minLength: 10,
+          maxLength: 2000
+        },
+
+        estado: {
+          bsonType: "string",
+          description: "Estado de la reseña. Valores permitidos: publicada, eliminada.",
+          enum: ["publicada", "eliminada"]
+        },
+
+        fecha_creacion: {
+          bsonType: "date",
+          description: "Fecha de creación de la reseña. Requerida."
+        },
+
+        fecha_modificacion: {
+          bsonType: "date",
+          description: "Fecha de última modificación. Opcional."
+        },
+
+        fecha_eliminacion: {
+          bsonType: "date",
+          description: "Fecha de eliminación (lógica). Opcional."
+        },
+
+        eliminado_por: {
+          bsonType: "string",
+          description: "Indica quién eliminó: cliente o administrador.",
+          enum: ["cliente", "administrador"]
+        },
+
+        destacada: {
+          bsonType: "bool",
+          description: "Indica si la reseña está destacada por el administrador. Opcional."
+        },
+
+        votos_utilidad: {
+          bsonType: "int",
+          description: "Contador de votos de utilidad. Por defecto 0.",
+          minimum: 0
+        },
+
+        respuesta_hotel: {
+          bsonType: "object",
+          description: "Respuesta oficial del administrador del hotel. Opcional.",
+          required: ["texto", "fecha"],
+          properties: {
+            texto: {
+              bsonType: "string",
+              description: "Texto de la respuesta del administrador.",
+              minLength: 5,
+              maxLength: 1000
+            },
+            fecha: {
+              bsonType: "date",
+              description: "Fecha de la respuesta."
+            },
+            id_admin: {
+              bsonType: "string",
+              description: "Usuario administrador que respondió (usuario APEX)."
+            }
+          }
+        }
+
+      },
+      additionalProperties: true
+    }
+  },
+  validationLevel: "strict",
+  validationAction: "error"
+});
+
+print("✓ Validación aplicada a colección 'resenas'");
+
+// ─────────────────────────────────────────────
+// VALIDACIÓN: votos_utilidad
+// ─────────────────────────────────────────────
+db.runCommand({
+  collMod: "votos_utilidad",
+  validator: {
+    $jsonSchema: {
+      bsonType: "object",
+      title: "Esquema de validación – Colección votos_utilidad",
+      required: ["id_resena", "id_usuario", "fecha_voto"],
+      properties: {
+
+        id_resena: {
+          bsonType: "objectId",
+          description: "Referencia al _id de la reseña votada. Requerido."
+        },
+
+        id_usuario: {
+          bsonType: "int",
+          description: "ID del cliente autenticado en Oracle que emitió el voto. Requerido.",
+          minimum: 1
+        },
+
+        fecha_voto: {
+          bsonType: "date",
+          description: "Fecha y hora del voto. Requerida."
+        }
+
+      },
+      additionalProperties: false
+    }
+  },
+  validationLevel: "strict",
+  validationAction: "error"
+});
+
+print("✓ Validación aplicada a colección 'votos_utilidad'");
+print("=== Script 02 completado ===");

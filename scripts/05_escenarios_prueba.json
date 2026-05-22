@@ -1,0 +1,140 @@
+// ============================================================
+// DANN-ALPES – Módulo de Reseñas
+// Script 05: Escenarios de prueba
+// Prueba que el esquema de validación rechaza documentos inválidos
+// ============================================================
+
+use("dann_alpes_resenas");
+
+print("=== ESCENARIO DE PRUEBA: Violaciones de esquema ===\n");
+
+// ── PRUEBA 1: Insertar sin calificación (campo requerido) ──
+print("PRUEBA 1: Sin calificación (debe FALLAR)");
+try {
+  db.resenas.insertOne({
+    id_hotel: 1,
+    id_cliente: 1,
+    id_reserva: 999,
+    // calificacion: ausente → debe rechazar
+    texto: "Esta reseña no tiene calificación y debería ser rechazada.",
+    estado: "publicada",
+    fecha_creacion: new Date()
+  });
+  print("  ✗ ERROR: Se insertó sin calificación (falla de validación)");
+} catch (e) {
+  print("  ✓ CORRECTO: Rechazado → " + e.message.substring(0, 100));
+}
+
+// ── PRUEBA 2: Calificación fuera del rango 1-5 ──
+print("\nPRUEBA 2: Calificación = 7 (debe FALLAR)");
+try {
+  db.resenas.insertOne({
+    id_hotel: 1,
+    id_cliente: 1,
+    id_reserva: 998,
+    calificacion: 7,  // máximo es 5
+    texto: "Esta calificación está fuera del rango permitido.",
+    estado: "publicada",
+    fecha_creacion: new Date()
+  });
+  print("  ✗ ERROR: Se insertó con calificación = 7");
+} catch (e) {
+  print("  ✓ CORRECTO: Rechazado → " + e.message.substring(0, 100));
+}
+
+// ── PRUEBA 3: Estado no permitido ──
+print("\nPRUEBA 3: Estado inválido (debe FALLAR)");
+try {
+  db.resenas.insertOne({
+    id_hotel: 1,
+    id_cliente: 1,
+    id_reserva: 997,
+    calificacion: 4,
+    texto: "El estado de esta reseña tiene un valor no permitido.",
+    estado: "pendiente",  // solo "publicada" o "eliminada"
+    fecha_creacion: new Date()
+  });
+  print("  ✗ ERROR: Se insertó con estado='pendiente'");
+} catch (e) {
+  print("  ✓ CORRECTO: Rechazado → " + e.message.substring(0, 100));
+}
+
+// ── PRUEBA 4: Texto demasiado corto (< 10 caracteres) ──
+print("\nPRUEBA 4: Texto muy corto (debe FALLAR)");
+try {
+  db.resenas.insertOne({
+    id_hotel: 1,
+    id_cliente: 1,
+    id_reserva: 996,
+    calificacion: 3,
+    texto: "Mal",  // menos de 10 caracteres
+    estado: "publicada",
+    fecha_creacion: new Date()
+  });
+  print("  ✗ ERROR: Se insertó con texto de 3 caracteres");
+} catch (e) {
+  print("  ✓ CORRECTO: Rechazado → " + e.message.substring(0, 100));
+}
+
+// ── PRUEBA 5: Sin fecha de creación (campo requerido) ──
+print("\nPRUEBA 5: Sin fecha_creacion (debe FALLAR)");
+try {
+  db.resenas.insertOne({
+    id_hotel: 1,
+    id_cliente: 1,
+    id_reserva: 995,
+    calificacion: 4,
+    texto: "Esta reseña no tiene fecha de creación asignada.",
+    estado: "publicada"
+    // fecha_creacion: ausente → debe rechazar
+  });
+  print("  ✗ ERROR: Se insertó sin fecha_creacion");
+} catch (e) {
+  print("  ✓ CORRECTO: Rechazado → " + e.message.substring(0, 100));
+}
+
+// ── PRUEBA 6: Documento válido (debe PASAR) ──
+print("\nPRUEBA 6: Documento completamente válido (debe PASAR)");
+try {
+  const r = db.resenas.insertOne({
+    id_hotel: 2,
+    id_cliente: 3,
+    id_reserva: 994,
+    calificacion: 4,
+    texto: "Excelente estadía, el personal fue muy atento y las instalaciones impecables.",
+    estado: "publicada",
+    fecha_creacion: new Date(),
+    votos_utilidad: 0
+  });
+  print("  ✓ CORRECTO: Insertado con _id = " + r.insertedId);
+  // Limpiar
+  db.resenas.deleteOne({ id_reserva: 994 });
+} catch (e) {
+  print("  ✗ ERROR inesperado: " + e.message);
+}
+
+// ── PRUEBA 7: Voto duplicado (índice único) ──
+print("\nPRUEBA 7: Voto duplicado del mismo usuario a la misma reseña (debe FALLAR)");
+const resena = db.resenas.findOne({ estado: "publicada" });
+try {
+  db.votos_utilidad.insertOne({
+    id_resena: resena._id,
+    id_usuario: 99,
+    fecha_voto: new Date()
+  });
+  db.votos_utilidad.insertOne({
+    id_resena: resena._id,
+    id_usuario: 99,  // mismo usuario, misma reseña
+    fecha_voto: new Date()
+  });
+  print("  ✗ ERROR: Se permitió voto duplicado");
+} catch (e) {
+  print("  ✓ CORRECTO: Voto duplicado rechazado → " + e.message.substring(0, 80));
+  // Limpiar
+  db.votos_utilidad.deleteOne({ id_usuario: 99 });
+}
+
+print("\n=== Script 05 completado – Resumen de pruebas ===");
+print("Pruebas 1-5: validación de esquema (deben FALLAR)");
+print("Prueba 6: documento válido (debe PASAR)");
+print("Prueba 7: índice único de votos (debe FALLAR)");
